@@ -16,7 +16,10 @@ ChatService::ChatService() {
     msgHandlerMap_.insert(
         {LOGIN_MSG, std::bind(&ChatService::login, this, std::placeholders::_1,
                               std::placeholders::_2, std::placeholders::_3)});
-
+    msgHandlerMap_.insert(
+        {LOGINOUT_MSG,
+         std::bind(&ChatService::loginout, this, std::placeholders::_1,
+                   std::placeholders::_2, std::placeholders::_3)});
     msgHandlerMap_.insert(
         {REG_MSG, std::bind(&ChatService::reg, this, std::placeholders::_1,
                             std::placeholders::_2, std::placeholders::_3)});
@@ -149,6 +152,23 @@ void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
         response["errno"] = 1;
         conn->send(response.dump());
     }
+}
+
+void ChatService::loginout(const TcpConnectionPtr &conn, json &js,
+                           Timestamp time) {
+    int userid = js["id"].get<int>();
+
+    {
+        std::lock_guard<std::mutex> lock(connMutex_);
+        auto it = userConnectionMap_.find(userid);
+        if (it != userConnectionMap_.end()) {
+            userConnectionMap_.erase(it);
+        }
+    }
+
+    // 更新用户的状态信息
+    User user(userid, "", "", "offline");
+    userModel_.updateState(user);
 }
 
 void ChatService::clientCloseException(const TcpConnectionPtr &conn) {
