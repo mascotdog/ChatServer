@@ -36,4 +36,27 @@ MsgHandler ChatService::getHandler(int msgid) {
 void ChatService::login(const TcpConnectionPtr &conn, json &js,
                         Timestamp time) {}
 
-void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {}
+void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
+    std::string name = js["name"];
+    std::string pwd = js["password"];
+
+    User user;
+    user.setName(name);
+    user.setPassword(pwd);
+    bool state = userModel_.insert(user);
+    if (state) {
+        // 注册成功
+        json response;
+        response["msgid"] = REG_MSG_ACK;
+        response["errno"] = 0;
+        response["id"] = user.getId();
+        conn->send(response.dump());
+    } else {
+        // 注册失败
+        json response;
+        response["msgid"] = REG_MSG_ACK;
+        response["errno"] = 1;
+        response["id"] = user.getId();
+        conn->send(response.dump());
+    }
+}

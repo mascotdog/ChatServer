@@ -7,7 +7,7 @@
 class User {
 public:
     User(int id = -1, std::string name = "", std::string pwd = "",
-         std::string state = "") {
+         std::string state = "offline") {
         this->id = id;
         this->name = name;
         this->password = pwd;
