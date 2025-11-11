@@ -19,6 +19,11 @@ ChatService::ChatService() {
     msgHandlerMap_.insert(
         {REG_MSG, std::bind(&ChatService::reg, this, std::placeholders::_1,
                             std::placeholders::_2, std::placeholders::_3)});
+
+    msgHandlerMap_.insert(
+        {ONE_CHAT_MSG,
+         std::bind(&ChatService::oneChat, this, std::placeholders::_1,
+                   std::placeholders::_2, std::placeholders::_3)});
 }
 
 MsgHandler ChatService::getHandler(int msgid) {
@@ -123,4 +128,22 @@ void ChatService::clientCloseException(const TcpConnectionPtr &conn) {
         user.setState("offline");
         userModel_.updateState(user);
     }
+}
+
+void ChatService::oneChat(const TcpConnectionPtr &conn, json &js,
+                          Timestamp time) {
+    int toid = js["to"].get<int>();
+
+    {
+        std::lock_guard<std::mutex> lock(connMutex_);
+        auto it = userConnectionMap_.find(toid);
+        if (it != userConnectionMap_.end()) {
+            // 对方在线，转发消息
+            // 服务器主动推送消息给对方
+            it->second->send(js.dump());
+            return;
+        }
+    }
+
+    // 对方不在线，存储离线消息
 }
