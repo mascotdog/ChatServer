@@ -27,6 +27,14 @@ ChatService::ChatService() {
                    std::placeholders::_2, std::placeholders::_3)});
 }
 
+
+void ChatService::reset()
+{
+    // 把online状态的用户，设置成offline
+    userModel_.resetState();
+}
+
+
 MsgHandler ChatService::getHandler(int msgid) {
     // 记录错误日志，msgid没有对应的事件处理回调
     auto it = msgHandlerMap_.find(msgid);
