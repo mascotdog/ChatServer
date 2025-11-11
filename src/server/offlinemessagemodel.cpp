@@ -41,7 +41,7 @@ std::vector<std::string> OfflineMsgModel::query(int userid) {
             while ((row = mysql_fetch_row(res)) != nullptr) {
                 vec.push_back(row[0]);
             }
-            mysql_free_result;
+            mysql_free_result(res);
             return vec;
         }
     }
