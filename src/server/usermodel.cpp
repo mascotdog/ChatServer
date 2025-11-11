@@ -14,7 +14,7 @@ bool UserModel::insert(User &user) {
     if(mysql.connect()){
         if(mysql.update(sql)){
             // 获取插入成功的用户数据生成的主键
-            
+            user.setId(mysql_insert_id(mysql.getConnection()));
             return true;
         }
     }
