@@ -72,7 +72,7 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
             json response;
             response["msgid"] = LOGIN_MSG_ACK;
             response["errno"] = 2;
-            response["errmsg"] = "该账号已经登录，请重新输入新账号";
+            response["errmsg"] = "this account is using, input another";
             conn->send(response.dump());
         } else {
             // 登录成功
@@ -122,7 +122,7 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
         json response;
         response["msgid"] = LOGIN_MSG_ACK;
         response["errno"] = 1;
-        response["errmsg"] = "用户名或者密码错误";
+        response["errmsg"] = "id or password is invalid!";
         conn->send(response.dump());
     }
 }
