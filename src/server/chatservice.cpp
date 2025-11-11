@@ -34,7 +34,42 @@ MsgHandler ChatService::getHandler(int msgid) {
 }
 
 void ChatService::login(const TcpConnectionPtr &conn, json &js,
-                        Timestamp time) {}
+                        Timestamp time) {
+    int id = js["id"].get<int>();
+    std::string pwd = js["password"];
+    User user = userModel_.query(id);
+    if (user.getId() == id && user.getPassword() == pwd) {
+        if (user.getState() == "online") {
+            // 该用户已经登录，不允许重复登录
+            json response;
+            response["msgid"] = LOGIN_MSG_ACK;
+            response["errno"] = 2;
+            response["errmsg"] = "该账号已经登录，请重新输入新账号";
+            conn->send(response.dump());
+        } else {
+            // 登录成功
+            // 更新用户状态信息 state offline->online
+            user.setState("online");
+            userModel_.updateState(user);
+
+            json response;
+            response["msgid"] = LOGIN_MSG_ACK;
+            response["errno"] = 0;
+            response["id"] = user.getId();
+            response["name"] = user.getName();
+            conn->send(response.dump());
+        }
+
+    } else {
+        // 该用户不存在，登录失败
+        // 用户存在但是密码错误
+        json response;
+        response["msgid"] = LOGIN_MSG_ACK;
+        response["errno"] = 1;
+        response["errmsg"] = "用户名或者密码错误";
+        conn->send(response.dump());
+    }
+}
 
 void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
     std::string name = js["name"];
@@ -56,7 +91,6 @@ void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time) {
         json response;
         response["msgid"] = REG_MSG_ACK;
         response["errno"] = 1;
-        response["id"] = user.getId();
         conn->send(response.dump());
     }
 }
