@@ -7,6 +7,7 @@
 #include <functional>
 #include <muduo/net/TcpConnection.h>
 #include <unordered_map>
+#include <mutex>
 
 using namespace muduo;
 using namespace muduo::net;
@@ -27,11 +28,18 @@ public:
     void reg(const TcpConnectionPtr &conn, json &js, Timestamp time);
     // 获取消息对应的处理器
     MsgHandler getHandler(int msgid);
+
 private:
     ChatService();
     // 存储消息id和其对应的业务处理方法
     std::unordered_map<int, MsgHandler> msgHandlerMap_;
 
+    // 存储在线用户的通信连接
+    std::unordered_map<int, TcpConnectionPtr> userConnectionMap_;
+
+    // 互斥锁，保证userConnectionMap_的线程安全
+    std::mutex connMutex_;
+    
     // 数据操作类对象
     UserModel userModel_;
 };
