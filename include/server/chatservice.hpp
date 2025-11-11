@@ -3,6 +3,7 @@
 
 #include "json.hpp"
 #include "usermodel.hpp"
+#include "offlinemessagemodel.hpp"
 
 #include <functional>
 #include <muduo/net/TcpConnection.h>
@@ -45,6 +46,7 @@ private:
     
     // 数据操作类对象
     UserModel userModel_;
+    OfflineMsgModel offlineMsgModel_;
 };
 
 #endif // __CHATSERVICE_H__
