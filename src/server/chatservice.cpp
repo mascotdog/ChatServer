@@ -29,6 +29,19 @@ ChatService::ChatService() {
         {ADD_FRIEND_MSG,
          std::bind(&ChatService::addFriend, this, std::placeholders::_1,
                    std::placeholders::_2, std::placeholders::_3)});
+
+    msgHandlerMap_.insert(
+        {CREATE_GROUP_MSG,
+         std::bind(&ChatService::createGroup, this, std::placeholders::_1,
+                   std::placeholders::_2, std::placeholders::_3)});
+    msgHandlerMap_.insert(
+        {ADD_GROUP_MSG,
+         std::bind(&ChatService::addGroup, this, std::placeholders::_1,
+                   std::placeholders::_2, std::placeholders::_3)});
+    msgHandlerMap_.insert(
+        {GROUP_CHAT_MSG,
+         std::bind(&ChatService::groupChat, this, std::placeholders::_1,
+                   std::placeholders::_2, std::placeholders::_3)});
 }
 
 void ChatService::reset() {
@@ -187,4 +200,46 @@ void ChatService::addFriend(const TcpConnectionPtr &conn, json &js,
 
     // 存储好友信息
     friendModel_.insert(userid, friendid);
+}
+
+void ChatService::createGroup(const TcpConnectionPtr &conn, json &js,
+                              Timestamp time) {
+    int userid = js["id"].get<int>();
+    string name = js["groupname"];
+    string desc = js["groupdesc"];
+
+    // 存储新创建的群组信息
+    Group group(-1, name, desc);
+    if (groupModel_.createGroup(group)) {
+        // 存储群组创建人信息
+        groupModel_.addGroup(userid, group.getId(), "creator");
+    }
+}
+
+// 加入群组业务
+void ChatService::addGroup(const TcpConnectionPtr &conn, json &js,
+                           Timestamp time) {
+    int userid = js["id"].get<int>();
+    int groupid = js["groupid"].get<int>();
+    groupModel_.addGroup(userid, groupid, "normal");
+}
+
+// 群组聊天业务
+void ChatService::groupChat(const TcpConnectionPtr &conn, json &js,
+                            Timestamp time) {
+    int userid = js["id"].get<int>();
+    int groupid = js["groupid"].get<int>();
+    std::vector<int> useridVec = groupModel_.queryGroupUsers(userid, groupid);
+
+    std::lock_guard<std::mutex> lock(connMutex_);
+    for (int id : useridVec) {
+        auto it = userConnectionMap_.find(id);
+        if (it != userConnectionMap_.end()) {
+            // 转发群消息
+            it->second->send(js.dump());
+        } else {
+            // 存储离线群消息
+            offlineMsgModel_.insert(id, js.dump());
+        }
+    }
 }

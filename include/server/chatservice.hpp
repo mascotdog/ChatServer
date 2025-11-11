@@ -2,6 +2,7 @@
 #define __CHATSERVICE_H__
 
 #include "friendmodel.hpp"
+#include "groupmodel.hpp"
 #include "json.hpp"
 #include "offlinemessagemodel.hpp"
 #include "usermodel.hpp"
@@ -32,6 +33,12 @@ public:
     void oneChat(const TcpConnectionPtr &conn, json &js, Timestamp time);
     // 添加好友业务
     void addFriend(const TcpConnectionPtr &conn, json &js, Timestamp time);
+    // 创建群组业务
+    void createGroup(const TcpConnectionPtr &conn, json &js, Timestamp time);
+    // 加入群组业务
+    void addGroup(const TcpConnectionPtr &conn, json &js, Timestamp time);
+    // 群组聊天业务
+    void groupChat(const TcpConnectionPtr &conn, json &js, Timestamp time);
     // 处理客户端异常退出
     void clientCloseException(const TcpConnectionPtr &conn);
     // 服务器异常，业务重置方法
@@ -55,6 +62,9 @@ private:
     UserModel userModel_;
     OfflineMsgModel offlineMsgModel_;
     FriendModel friendModel_;
+    GroupModel groupModel_;
 };
+
+
 
 #endif // __CHATSERVICE_H__
