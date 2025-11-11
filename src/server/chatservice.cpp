@@ -25,15 +25,16 @@ ChatService::ChatService() {
         {ONE_CHAT_MSG,
          std::bind(&ChatService::oneChat, this, std::placeholders::_1,
                    std::placeholders::_2, std::placeholders::_3)});
+    msgHandlerMap_.insert(
+        {ADD_FRIEND_MSG,
+         std::bind(&ChatService::addFriend, this, std::placeholders::_1,
+                   std::placeholders::_2, std::placeholders::_3)});
 }
 
-
-void ChatService::reset()
-{
+void ChatService::reset() {
     // 把online状态的用户，设置成offline
     userModel_.resetState();
 }
-
 
 MsgHandler ChatService::getHandler(int msgid) {
     // 记录错误日志，msgid没有对应的事件处理回调
@@ -84,6 +85,19 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
                 response["offlinemsg"] = vec;
                 // 读取后，把该用户的所有离线消息删除
                 offlineMsgModel_.remove(id);
+            }
+            // 查询该用户的好友信息并返回
+            std::vector<User> userVec = friendModel_.query(id);
+            if (!userVec.empty()) {
+                std::vector<std::string> user2jsVec;
+                for (User &user : userVec) {
+                    json js;
+                    js["id"] = user.getId();
+                    js["name"] = user.getName();
+                    js["state"] = user.getState();
+                    user2jsVec.push_back(js.dump());
+                }
+                response["friends"] = user2jsVec;
             }
 
             conn->send(response.dump());
@@ -164,4 +178,13 @@ void ChatService::oneChat(const TcpConnectionPtr &conn, json &js,
 
     // 对方不在线，存储离线消息
     offlineMsgModel_.insert(toid, js.dump());
+}
+
+void ChatService::addFriend(const TcpConnectionPtr &conn, json &js,
+                            Timestamp time) {
+    int userid = js["id"].get<int>();
+    int friendid = js["friendid"].get<int>();
+
+    // 存储好友信息
+    friendModel_.insert(userid, friendid);
 }

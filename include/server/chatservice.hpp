@@ -1,6 +1,7 @@
 #ifndef __CHATSERVICE_H__
 #define __CHATSERVICE_H__
 
+#include "friendmodel.hpp"
 #include "json.hpp"
 #include "offlinemessagemodel.hpp"
 #include "usermodel.hpp"
@@ -29,12 +30,15 @@ public:
     void reg(const TcpConnectionPtr &conn, json &js, Timestamp time);
     // 一对一聊天业务
     void oneChat(const TcpConnectionPtr &conn, json &js, Timestamp time);
-    // 获取消息对应的处理器
-    MsgHandler getHandler(int msgid);
+    // 添加好友业务
+    void addFriend(const TcpConnectionPtr &conn, json &js, Timestamp time);
     // 处理客户端异常退出
     void clientCloseException(const TcpConnectionPtr &conn);
     // 服务器异常，业务重置方法
     void reset();
+
+    // 获取消息对应的处理器
+    MsgHandler getHandler(int msgid);
 
 private:
     ChatService();
@@ -50,6 +54,7 @@ private:
     // 数据操作类对象
     UserModel userModel_;
     OfflineMsgModel offlineMsgModel_;
+    FriendModel friendModel_;
 };
 
 #endif // __CHATSERVICE_H__
