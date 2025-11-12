@@ -45,6 +45,12 @@ ChatService::ChatService() {
         {GROUP_CHAT_MSG,
          std::bind(&ChatService::groupChat, this, std::placeholders::_1,
                    std::placeholders::_2, std::placeholders::_3)});
+
+    if (redis_.connect()) {
+        redis_.init_notify_handler(
+            std::bind(&ChatService::handleRedisSubscribeMessage, this,
+                      std::placeholders::_1, std::placeholders::_2));
+    }
 }
 
 void ChatService::reset() {
@@ -85,6 +91,9 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js,
                 std::lock_guard<std::mutex> lock(connMutex_);
                 userConnectionMap_.insert({id, conn});
             }
+
+            // id用户登录成功后，向redis订阅channel(id)
+            redis_.subscribe(id);
 
             // 更新用户状态信息 state offline->online
             user.setState("online");
@@ -166,6 +175,9 @@ void ChatService::loginout(const TcpConnectionPtr &conn, json &js,
         }
     }
 
+    // 用户注销，在redis中取消订阅通道
+    redis_.unsubscribe(userid);
+
     // 更新用户的状态信息
     User user(userid, "", "", "offline");
     userModel_.updateState(user);
@@ -187,6 +199,9 @@ void ChatService::clientCloseException(const TcpConnectionPtr &conn) {
         }
     }
 
+    // 用户注销，在redis中取消订阅通道
+    redis_.unsubscribe(user.getId());
+
     // 更新用户的状态信息
     if (user.getId() != -1) {
         user.setState("offline");
@@ -207,6 +222,13 @@ void ChatService::oneChat(const TcpConnectionPtr &conn, json &js,
             it->second->send(js.dump());
             return;
         }
+    }
+
+    // 查询toid是否在线
+    User user = userModel_.query(toid);
+    if (user.getState() == "online") {
+        redis_.publish(toid, js.dump());
+        return;
     }
 
     // 对方不在线，存储离线消息
@@ -258,8 +280,27 @@ void ChatService::groupChat(const TcpConnectionPtr &conn, json &js,
             // 转发群消息
             it->second->send(js.dump());
         } else {
-            // 存储离线群消息
-            offlineMsgModel_.insert(id, js.dump());
+            // 存储离线群消息    // 查询toid是否在线
+            User user = userModel_.query(id);
+            if (user.getState() == "online") {
+                redis_.publish(id, js.dump());
+            } else {
+                offlineMsgModel_.insert(id, js.dump());
+            }
         }
     }
+}
+
+void ChatService::handleRedisSubscribeMessage(int userid, std::string msg) {
+    json js = json::parse(msg.c_str());
+
+    std::lock_guard<std::mutex> lock(connMutex_);
+    auto it = userConnectionMap_.find(userid);
+    if (it != userConnectionMap_.end()) {
+        it->second->send(js.dump());
+        return;
+    }
+
+    // 存储该用户的离线消息
+    offlineMsgModel_.insert(userid, msg);
 }

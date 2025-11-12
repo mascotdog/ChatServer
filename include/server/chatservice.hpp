@@ -5,6 +5,7 @@
 #include "groupmodel.hpp"
 #include "json.hpp"
 #include "offlinemessagemodel.hpp"
+#include "redis.hpp"
 #include "usermodel.hpp"
 
 #include <functional>
@@ -46,6 +47,9 @@ public:
     // 服务器异常，业务重置方法
     void reset();
 
+    // 从redis消息队列中获取订阅的消息
+    void handleRedisSubscribeMessage(int userid ,std::string msg);
+
     // 获取消息对应的处理器
     MsgHandler getHandler(int msgid);
 
@@ -65,6 +69,9 @@ private:
     OfflineMsgModel offlineMsgModel_;
     FriendModel friendModel_;
     GroupModel groupModel_;
+
+    // redis操作对象
+    Redis redis_;
 };
 
 #endif // __CHATSERVICE_H__
